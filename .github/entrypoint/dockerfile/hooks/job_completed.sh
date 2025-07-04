@@ -3,7 +3,7 @@
 
 hr='------------------------------------------------------------------------------------'
 CONTAINER="mydb"
-APP="freqtrade"
+APP="freqtrade_live"
 
 echo -e "\n$hr\nFinal Space\n$hr"
 df -h
@@ -21,6 +21,11 @@ if [ -d /mnt/disks/deeplearning/usr/local/sbin ]; then
     -H "Accept: application/vnd.github.v3+json" \
     "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/variables/RERUN_RUNNER" | jq -r '.value')
 
+  REMOVE_REPOSITORY=$(curl -s \
+    -H "Authorization: token $GITHUB_ACCESS_TOKEN" \
+    -H "Accept: application/vnd.github.v3+json" \
+    "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/variables/REMOVE_REPOSITORY" | jq -r '.value')
+
   TARGET_REPOSITORY=$(curl -s \
     -H "Authorization: token $GITHUB_ACCESS_TOKEN" \
     -H "Accept: application/vnd.github.v3+json" \
@@ -28,7 +33,8 @@ if [ -d /mnt/disks/deeplearning/usr/local/sbin ]; then
 
   echo -e "\n$hr\nStart Network\n$hr"
   if [[ "$RERUN_RUNNER" == "true" ]]; then
-    /mnt/disks/deeplearning/usr/bin/docker exec mydb supervisorctl start freqtrade
+    /mnt/disks/deeplearning/usr/bin/docker exec mydb supervisorctl start freqtrade_live
+    /mnt/disks/deeplearning/usr/bin/docker exec mydb supervisorctl start freqtrade_dry
     /mnt/disks/deeplearning/usr/bin/docker exec mydb service cron start
 
   #Check if ✅ $APP is running inside $CONTAINER
@@ -36,9 +42,9 @@ if [ -d /mnt/disks/deeplearning/usr/local/sbin ]; then
     /mnt/disks/deeplearning/usr/bin/docker exec "$CONTAINER" supervisorctl status "$APP" | grep -q "RUNNING"; then
 
     if [[ "$CONTAINER_NAME" == "runner1" ]]; then
-      /mnt/disks/deeplearning/usr/bin/docker exec runner2 /home/runner/scripts/exitpoint.sh $TARGET_REPOSITORY
+      /mnt/disks/deeplearning/usr/bin/docker exec runner2 /home/runner/scripts/exitpoint.sh $REMOVE_REPOSITORY $TARGET_REPOSITORY
     elif [[ "$CONTAINER_NAME" == "runner2" ]]; then
-      /mnt/disks/deeplearning/usr/bin/docker exec runner1 /home/runner/scripts/exitpoint.sh $TARGET_REPOSITORY
+      /mnt/disks/deeplearning/usr/bin/docker exec runner1 /home/runner/scripts/exitpoint.sh $REMOVE_REPOSITORY $TARGET_REPOSITORY
     fi
 
   else

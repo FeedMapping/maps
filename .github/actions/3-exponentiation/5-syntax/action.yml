@@ -92,8 +92,8 @@ runs:
           --data @${{ github.workspace }}/docs/data.json | jq '.'
 
         # Bring GitHub Env Variables in to the config file on another container usong docker from the attached deeplearning image
-        /mnt/disks/deeplearning/usr/bin/docker exec mydb sed -i "s|your_exchange_key|${{ inputs.api_key }}|g" /home/runner/user_data/config.json
-        /mnt/disks/deeplearning/usr/bin/docker exec mydb sed -i "s|your_exchange_secret|${{ inputs.api_secret }}|g" /home/runner/user_data/config.json
+        /mnt/disks/deeplearning/usr/bin/docker exec mydb sed -i "s|your_exchange_key|${{ inputs.api_key }}|g" /home/runner/data_live/config.json
+        /mnt/disks/deeplearning/usr/bin/docker exec mydb sed -i "s|your_exchange_secret|${{ inputs.api_secret }}|g" /home/runner/data_live/config.json
 
     - name: 💎 Connect to Redis
       # Runs a script that creates a Redis client, populates
@@ -121,3 +121,10 @@ runs:
       run: |
         node /home/runner/scripts/post.js
         echo '${{ inputs.pauli_sum }}'
+
+    - name: ⚧️ Rerun workflow if failed
+      if: ${{ failure() }}
+      shell: bash
+      run: |
+        [[ "$GITHUB_JOB" == "parsering" ]] && gh workflow run "main.yml"
+        exit 1
